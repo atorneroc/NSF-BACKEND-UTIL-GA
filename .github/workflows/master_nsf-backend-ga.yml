@@ -84,5 +84,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'nsf-backend-ga'
-          slot-name: 'Production'
+          slot-name: 'production'
           package: ./publish
+          runtime-stack: 'DOTNETCORE|8.0'
+          startup-command: 'dotnet Scharff.API.Utils.dll'
