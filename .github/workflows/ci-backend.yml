@@ -41,3 +41,4 @@ jobs:
         with:
           name: backend-artifact
           path: ./publish
+          retention-days: 5 # Mantener el artefacto por 5 días
