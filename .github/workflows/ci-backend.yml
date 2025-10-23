@@ -29,7 +29,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: 🧪 Ejecutar pruebas
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test ./Scharff.UnitTest/Scharff.UnitTest.csproj --verbosity normal
 
       - name: 📤 Publicar artefactos
         run: dotnet publish -c Release -o ./publish
