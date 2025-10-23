@@ -33,7 +33,7 @@ jobs:
 
       - name: 📤 Publicar artefactos
         #run: dotnet publish -c Release -o ./publish
-        run: dotnet publish Scharff.Application.Utils/Scharff.Application.Utils.csproj -c Release -o ./publish
+        run: dotnet publish ./Scharff.API.Utils/Scharff.API.Utils.csproj -c Release -o ./publish
         if: success()
 
       - name: 📦 Subir artefacto de build
