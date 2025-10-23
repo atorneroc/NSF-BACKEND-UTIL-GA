@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 0. Listar artefactos disponibles
+      - name: 🔍 Listar artefactos disponibles
+        run: ls -la
       # 1. Descargar artefacto generado por el pipeline de CI
       - name: 🧰 Descargar artefacto del pipeline de CI
         uses: actions/download-artifact@v4
