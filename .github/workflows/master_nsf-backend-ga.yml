@@ -51,6 +51,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:    
+    
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       # 0. Listar artefactos disponibles
       - name: 🔍 Listar artefactos disponibles
         run: ls -la
@@ -81,7 +85,7 @@ jobs:
         run: tree ./publish || ls -R ./publish
 
       - name: 🚀 Desplegar en Azure App Service
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v2
         with:
           app-name: 'nsf-backend-ga'
           package: ./publish
