@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   build:
+    name: 🧪 CI - Build & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -43,6 +44,12 @@ jobs:
           path: ./publish
           retention-days: 5 # Mantener el artefacto por 5 días
       
+  deploy:
+    name: 🚀 CD - Deploy to Azure
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:    
       # 0. Listar artefactos disponibles
       - name: 🔍 Listar artefactos disponibles
         run: ls -la
@@ -62,6 +69,9 @@ jobs:
           fi
           echo "Artefacto validado correctamente. Azure gestionará el despliegue."
 
-      # 3. Informar que Azure manejará el despliegue automáticamente
-      - name: 🚀 Despliegue gestionado por Azure
-        run: echo "El despliegue se realizará automáticamente por Azure App Service."
+      - name: 🚀 Desplegar en Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'nsf-backend-ga'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
