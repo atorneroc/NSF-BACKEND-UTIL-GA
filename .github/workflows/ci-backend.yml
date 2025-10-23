@@ -42,3 +42,26 @@ jobs:
           name: backend-artifact
           path: ./publish
           retention-days: 5 # Mantener el artefacto por 5 días
+      
+      # 0. Listar artefactos disponibles
+      - name: 🔍 Listar artefactos disponibles
+        run: ls -la
+      # 1. Descargar artefacto generado por el pipeline de CI
+      - name: 🧰 Descargar artefacto del pipeline de CI
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-artifact # Nombre del artefacto generado en CI
+          path: ./publish # Directorio donde se descargará el artefacto
+
+      # 2. Validar que el artefacto existe y está correcto
+      - name: ✅ Validar artefacto
+        run: |
+          if [ ! -d "./publish" ]; then
+            echo "El artefacto no fue descargado correctamente. Verifica el pipeline de CI."
+            exit 1
+          fi
+          echo "Artefacto validado correctamente. Azure gestionará el despliegue."
+
+      # 3. Informar que Azure manejará el despliegue automáticamente
+      - name: 🚀 Despliegue gestionado por Azure
+        run: echo "El despliegue se realizará automáticamente por Azure App Service."

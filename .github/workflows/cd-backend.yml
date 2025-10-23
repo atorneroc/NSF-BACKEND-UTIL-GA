@@ -3,7 +3,7 @@ name: Backend CD (.NET 8)
 # Este pipeline se ejecuta automáticamente después del pipeline de CI
 on:
   workflow_run:
-    workflows: ["Backend CI (.NET 8)"] # Nombre del pipeline de CI que dispara este CD
+    workflows: ["Backend CI (.NET 8)Disabled"] # Nombre del pipeline de CI que dispara este CD
     types:
       - completed
 
