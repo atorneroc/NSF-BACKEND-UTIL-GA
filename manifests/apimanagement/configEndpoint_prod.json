@@ -1,0 +1,11 @@
+{
+  "name": "facturacion-util-production",
+  "displayName": "Facturacion-Util-Production",
+  "description": "API configurada de Facturacion-Util-Production",
+  "serviceUrl": "http://10.112.0.63:5002",
+  "path": "nsf/util",
+  "protocols": ["https"],
+  "subscriptionRequired": false,
+  "product": "Facturacion-Production",
+  "buildNumber": 0
+}

@@ -1,0 +1,11 @@
+{
+  "name": "facturacion-util-develop",
+  "displayName": "Facturacion-Util-Develop",
+  "description": "API configurada de Facturacion-Util-Develop",
+  "serviceUrl": "http://10.112.0.59:5002",
+  "path": "facturacion/util/dev",
+  "protocols": ["https"],
+  "subscriptionRequired": false,
+  "product": "Facturacion-Develop",
+  "buildNumber": 0
+}

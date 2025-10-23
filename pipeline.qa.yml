@@ -1,0 +1,52 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- qaDisabled
+
+stages:
+  - stage: Build
+    displayName: 'Building'
+    jobs:
+      - job: BuildWebApp
+        variables:
+          buildConfiguration: 'Release'
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+        - task: DotNetCoreCLI@2
+          displayName: 'Building webApp'
+          inputs:
+            command: 'publish'
+            publishWebProjects: true
+            arguments: '--configuration Release --output $(Build.BinariesDirectory)/$(Build.BuildId)'
+            modifyOutputPath: false
+        - task: PublishBuildArtifacts@1
+          displayName: 'Generating Artifacts'
+          inputs:
+            PathtoPublish: '$(Build.BinariesDirectory)/$(Build.BuildId)'
+            ArtifactName: 'nsf-backend-util'
+            publishLocation: 'Container'
+
+  - stage: DeployWebApp
+    displayName: 'Deploying'
+    jobs:
+      - deployment: 
+        pool:
+          vmImage: ubuntu-latest
+        environment: 'QA'
+        strategy: 
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureRmWebAppDeployment@4
+                  inputs:
+                    ConnectionType: 'AzureRM'
+                    azureSubscription: 'nsf-qa-serviceconnection'
+                    appType: 'webAppLinux'
+                    WebAppName: 'nsf-backend-util-qa'
+                    packageForLinux: '$(Pipeline.Workspace)/**/*.zip'
+                    RuntimeStack: 'DOTNETCORE|6.0'
+                    StartupCommand: 'dotnet Scharff.API.Utils.dll'

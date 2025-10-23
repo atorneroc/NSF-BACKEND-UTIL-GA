@@ -1,0 +1,11 @@
+{
+  "name": "facturacion-util-stage",
+  "displayName": "Facturacion-Util-Stage",
+  "description": "API configurada de Facturacion-Util-Stage",
+  "serviceUrl": "http://10.112.0.109:5002",
+  "path": "stage/util",
+  "protocols": ["https"],
+  "subscriptionRequired": false,
+  "product": "Facturacion-Stage",
+  "buildNumber": 0
+}

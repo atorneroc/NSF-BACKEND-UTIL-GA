@@ -1,0 +1,46 @@
+name: Build and Deploy .NET 8 App to Azure WebApp
+
+on:
+  push:
+    branches:
+      - devATCDisabled
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write      # 👈 NECESARIO para OIDC
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Publish
+        run: dotnet publish Scharff.API.Utils.csproj --configuration Release -o ./publish_output
+      - name: Publish
+        run: dotnet publish Scharff.API.Utils/Scharff.API.Utils.csproj --configuration Release -o ./publish_output
+
+
+      - name: Zip publish folder
+        run: zip -r publish.zip ./publish_output/*
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D80EBAF0479E46859D2F527EDE6CEC08 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_EFE215A6178244B2AD24D70A071CD982 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FCFA3AF96D75411A8EAE0717A4503E9C }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'test-util-ci-cd'
+          package: './publish.zip'
+          startup-command: 'dotnet Scharff.API.Utils.dll'

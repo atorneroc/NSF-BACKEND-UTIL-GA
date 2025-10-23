@@ -1,0 +1,11 @@
+{
+  "name": "facturacion-util-qa",
+  "displayName": "Facturacion-Util-QA",
+  "description": "API configurada de Facturacion-Util-QA",
+  "serviceUrl": "http://10.112.0.69:5002",
+  "path": "facturacion/util/qa",
+  "protocols": ["https"],
+  "subscriptionRequired": false,
+  "product": "Facturacion-QA",
+  "buildNumber": 0
+}
