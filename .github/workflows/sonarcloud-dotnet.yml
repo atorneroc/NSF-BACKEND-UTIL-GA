@@ -1,96 +1,47 @@
-name: SonarCloud (.NET 8)
-
+name: SonarQube
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      - master
   pull_request:
-    branches: [ "master" ]
     types: [opened, synchronize, reopened]
-
-permissions:
-  contents: read
-  actions: read
-
 jobs:
-  sonarcloud:
-    name: 🔍 Análisis de SonarCloud
-    runs-on: ubuntu-latest
-
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+  build:
+    name: Build and analyze
+    runs-on: windows-latest
     steps:
-      # 🧰 1. Checkout del código
-      - name: 🧰 Checkout del código
-        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          fetch-depth: 0
-
-      # ⚙️ 2. Configurar .NET 8
-      - name: ⚙️ Configurar .NET 8
-        uses: actions/setup-dotnet@v3
+          java-version: 17
+          distribution: 'zulu' # Alternative distribution options are available.
+      - uses: actions/checkout@v4
         with:
-          dotnet-version: '8.0.x'
-
-      # 💾 3. Restaurar dependencias
-      - name: 📦 Restaurar dependencias
-        run: dotnet restore nsf-backend-util.sln
-
-      # 🧩 4. Instalar SonarScanner
-      - name: 🧩 Instalar dotnet-sonarscanner
-        run: dotnet tool install --global dotnet-sonarscanner
-
-      - name: 🛠️ Agregar herramientas .NET al PATH
-        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-      # 📂 5. Mostrar estructura (debug)
-      - name: 📂 Mostrar estructura del workspace
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Cache SonarQube Cloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~\sonar\cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Cache SonarQube Cloud scanner
+        id: cache-sonar-scanner
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+      - name: Install SonarQube Cloud scanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        shell: powershell
         run: |
-          echo "📁 Directorio actual: $(pwd)"
-          ls -R | head -n 100
-
-      # 🚀 6. Iniciar análisis SonarCloud
-      - name: 🔍 Begin SonarCloud Analysis
-        run: |
-          dotnet sonarscanner begin \
-            /k:"atorneroc_NSF-BACKEND-UTIL-GA" \
-            /o:"atorneroc" \
-            /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.login="${SONAR_TOKEN}" \
-            /d:sonar.projectBaseDir="." \
-            /d:sonar.sources="." \
-            /d:sonar.inclusions="**/*.cs" \
-            /d:sonar.exclusions="**/bin/**/*,**/obj/**/*,**/*.Test.cs,**/Migrations/**/*" \
-            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
-            /d:sonar.coverage.exclusions="**/bin/**/*,**/obj/**/*,**/Migrations/**/*" \
-            /d:sonar.verbose=true
-
-      # 🏗️ 7. Compilar proyecto (Release)
-      - name: 🏗️ Compilar proyecto
-        run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
-
-      # 🧪 8. Ejecutar pruebas unitarias con cobertura
-      - name: 🧪 Ejecutar pruebas con cobertura
-        run: |
-          dotnet test ./Scharff.UnitTest/Scharff.UnitTest.csproj \
-            --no-build \
-            --configuration Release \
-            --logger:"trx;LogFileName=test_results.trx" \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
-      # 🏁 9. Finalizar análisis SonarCloud
-      - name: 🏁 End SonarCloud Analysis
-        run: dotnet sonarscanner end /d:sonar.login="${SONAR_TOKEN}"
+          New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory
+          dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
+      - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      # 📊 10. Publicar resultados de pruebas
-      - name: 📊 Publicar resultados de pruebas
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: ./TestResults
+        shell: powershell
+        run: |
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"atorneroc_NSF-BACKEND-UTIL-GA" /o:"atorneroc" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          dotnet build
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
