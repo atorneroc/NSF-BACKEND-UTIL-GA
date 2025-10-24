@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: "weekly"
     labels: ["dependencies"]
+    ignore:
+      - dependency-name: "EPPlus"
+        versions: [">=7.0.0"]  # ignora cualquier versión 7 o superior
+      - dependency-name: "AutoMapper"
+        versions: [">=14.0.0"] # ignora desde la 14 en adelante
 
   - package-ecosystem: "github-actions"
     directory: "/"
