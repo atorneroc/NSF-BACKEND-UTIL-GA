@@ -52,9 +52,13 @@ jobs:
         uses: github/codeql-action/analyze@v3
 
       # 7️⃣ (Opcional) Subir el archivo SARIF como artefacto para descarga local
-      - name: 📦 Subir reporte SARIF
+      - name: 📦 Subir reporte SARIF (opcional)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: codeql-sarif
-          path: results/*.sarif
+          path: |
+            **/results/*.sarif
+            **/codeql-databases/**/*.sarif
+            /home/runner/work/_temp/codeql_databases/**/*.sarif
+
