@@ -44,6 +44,9 @@ jobs:
       - name: 🛠️ Agregar herramientas .NET al PATH
         run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
+      - name: 🔧 Posicionar en la raíz del proyecto
+        run: cd $GITHUB_WORKSPACE
+
       # 🚀 5. Iniciar análisis SonarCloud
       - name: 🔍 Begin SonarCloud Analysis
         run: |
