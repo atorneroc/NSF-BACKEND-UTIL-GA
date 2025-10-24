@@ -13,40 +13,26 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
-      # 🧰 1. Checkout del código
       - name: 🧰 Checkout del código
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # importante para análisis preciso
+          fetch-depth: 0
 
-      # ⚙️ 2. Configurar .NET 8
       - name: ⚙️ Configurar .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      # 📦 3. Restaurar dependencias
-      - name: 📦 Restaurar dependencias
-        run: dotnet restore
-
-      # 🚀 4. Iniciar análisis SonarCloud
-      - name: 🚀 Iniciar análisis SonarCloud
+      - name: 🚀 Analizar con SonarCloud
         run: |
+          pwd
+          ls
+          dotnet restore nsf-backend-util.sln
           dotnet tool install --global dotnet-sonarscanner
           dotnet sonarscanner begin \
             /k:"atorneroc_NSF-BACKEND-UTIL-GA" \
             /o:"atorneroc" \
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
             /d:sonar.exclusions="**/bin/**,**/obj/**,.github/**"
-
-      # 🏗️ 5. Compilar proyecto en modo Release
-      - name: 🏗️ Compilar el proyecto
-        run: dotnet build --configuration Release --no-restore
-
-      # 🧪 6. (Opcional) Ejecutar pruebas unitarias
-      - name: 🧪 Ejecutar pruebas
-        run: dotnet test ./Scharff.UnitTest/Scharff.UnitTest.csproj --verbosity normal --logger "trx;LogFileName=test_results.trx"
-
-      # 🧩 7. Finalizar análisis SonarCloud
-      - name: 🧩 Finalizar análisis SonarCloud
-        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          dotnet build nsf-backend-util.sln --configuration Release --no-restore
+          dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
