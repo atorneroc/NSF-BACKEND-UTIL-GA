@@ -49,8 +49,15 @@ jobs:
       - name: 🏗️ Build solution
         run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
 
-      - name: 🧪 Run tests and collect coverage
-        run: dotnet test nsf-backend-util.sln --no-build --logger:trx --collect:"XPlat Code Coverage"
+      - name: 🧪 Ejecutar pruebas unitarias y recolectar cobertura
+        run: |
+          dotnet test ./Scharff.UnitTest/Scharff.UnitTest.csproj \
+            --no-build \
+            --configuration Release \
+            --logger:"trx;LogFileName=test_results.trx" \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
 
       - name: 🚀 End SonarCloud Analysis
         run: dotnet sonarscanner end /d:sonar.login="${SONAR_TOKEN}"
