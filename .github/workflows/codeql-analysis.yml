@@ -18,22 +18,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 🧰 1. Checkout del código fuente
       - name: 🧰 Checkout del código
         uses: actions/checkout@v5
 
+      # ⚙️ 2. Configurar SDK .NET 8
       - name: ⚙️ Configurar .NET 8
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
 
+      # 🧩 3. Verificar versión de .NET
       - name: 🧩 Verificar versión de .NET
         run: dotnet --info
 
-      - name: Initialize CodeQL
+      # 📦 4. Restaurar dependencias
+      - name: 📦 Restaurar dependencias
+        run: dotnet restore nsf-backend-util.sln
+
+      # 🏗️ 5. Compilar solución completa
+      - name: 🏗️ Compilar la solución
+        run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
+
+      # 🧪 6. Inicializar CodeQL
+      - name: 🧪 Inicializar CodeQL
         uses: github/codeql-action/init@v3
         with:
-          languages: csharp,javascript
-          autobuild: true
+          languages: csharp
+          # Si más adelante agregas JS o TS en este repo, puedes cambiar a:
+          # languages: csharp,javascript
 
-      - name: Perform CodeQL analysis
+      # 🔍 7. Analizar con CodeQL
+      - name: 🔍 Ejecutar análisis de CodeQL
         uses: github/codeql-action/analyze@v3
