@@ -29,30 +29,40 @@ jobs:
       - name: 🧩 Verificar versión de .NET
         run: dotnet --info
 
-      # Inicializa CodeQL en modo 'manual' (tú ejecutarás restore/build dentro del contexto)
+      # Inicializar CodeQL en modo manual para que capture el build que ejecutarás
       - name: 🧪 Inicializar CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: csharp
           build-mode: manual
+          # queries: security-and-quality,experimental   # <-- puedes descomentar 'experimental' si quieres más cobertura (más falsos positivos)
           queries: security-and-quality
 
-      # Restaurar dependencias desde dentro del contexto CodeQL
-      - name: 📦 Restaurar dependencias
+      # Restaurar y compilar la solución completa (todos los subproyectos)
+      - name: 📦 Restaurar dependencias de la solución
         run: dotnet restore nsf-backend-util.sln
 
-      # Compilar la solución completa para generar los binarios que CodeQL necesita
-      - name: 🏗️ Compilar el proyecto
-        run: dotnet build --configuration Release --no-restore
+      - name: 🏗️ Compilar solución (Release)
+        run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
 
-      # Ejecutar el análisis y subir resultados a GitHub (Code scanning alerts)
+      # Ejecutar el análisis de CodeQL y subir resultados a GitHub
       - name: 🔍 Ejecutar análisis de CodeQL
         uses: github/codeql-action/analyze@v3
 
-      # (Opcional) Guardar el/s SARIF generados como artifact para descargar y revisar localmente
+      # Diagnóstico: listar si hay SARIF generado en el workspace (ayuda a localizarlo si no lo encuentra el upload)
+      - name: 🔎 Buscar archivos SARIF generados (diagnóstico)
+        if: always()
+        run: |
+          echo "Buscando archivos .sarif en /home/runner/work..."
+          find /home/runner/work -type f -name "*.sarif" -print || echo "No se encontraron archivos .sarif"
+
+      # Subir el/los SARIF encontrados como artifact (glob amplio para cubrir rutas posibles)
       - name: 📦 Subir reporte SARIF (opcional)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: codeql-sarif
-          path: results/*.sarif
+          path: |
+            /home/runner/work/**/*.sarif
+            **/results/*.sarif
+            **/*.sarif
