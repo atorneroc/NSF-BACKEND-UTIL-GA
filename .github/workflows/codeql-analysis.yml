@@ -29,21 +29,30 @@ jobs:
       - name: 🧩 Verificar versión de .NET
         run: dotnet --info
 
-      # 🧪 1. Inicializar CodeQL antes del build
+      # Inicializa CodeQL en modo 'manual' (tú ejecutarás restore/build dentro del contexto)
       - name: 🧪 Inicializar CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: csharp
           build-mode: manual
+          queries: security-and-quality
 
-      # 📦 2. Restaurar dependencias dentro del contexto CodeQL
+      # Restaurar dependencias desde dentro del contexto CodeQL
       - name: 📦 Restaurar dependencias
         run: dotnet restore nsf-backend-util.sln
 
-      # 🏗️ 3. Compilar la solución (aquí CodeQL sí ve los assets)
+      # Compilar la solución completa para generar los binarios que CodeQL necesita
       - name: 🏗️ Compilar solución
         run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
 
-      # 🔍 4. Analizar con CodeQL
+      # Ejecutar el análisis y subir resultados a GitHub (Code scanning alerts)
       - name: 🔍 Ejecutar análisis de CodeQL
         uses: github/codeql-action/analyze@v3
+
+      # (Opcional) Guardar el/s SARIF generados como artifact para descargar y revisar localmente
+      - name: 📦 Subir reporte SARIF (opcional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif
+          path: results/*.sarif
