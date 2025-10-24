@@ -18,11 +18,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout del código fuente
       - name: 🧰 Checkout del código
         uses: actions/checkout@v5
 
-      # 2️⃣ Instalar .NET 8 (compatible con tus proyectos)
       - name: ⚙️ Configurar .NET 8
         uses: actions/setup-dotnet@v5
         with:
@@ -31,34 +29,40 @@ jobs:
       - name: 🧩 Verificar versión de .NET
         run: dotnet --info
 
-      # 3️⃣ Inicializar CodeQL (modo manual: tú controlas el build)
+      # Inicializar CodeQL en modo manual para que capture el build que ejecutarás
       - name: 🧪 Inicializar CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: csharp
           build-mode: manual
+          # queries: security-and-quality,experimental   # <-- puedes descomentar 'experimental' si quieres más cobertura (más falsos positivos)
           queries: security-and-quality
 
-      # 4️⃣ Restaurar dependencias de TODOS los proyectos de la solución
+      # Restaurar y compilar la solución completa (todos los subproyectos)
       - name: 📦 Restaurar dependencias de la solución
         run: dotnet restore nsf-backend-util.sln
 
-      # 5️⃣ Compilar todos los proyectos dentro de la solución
-      - name: 🏗️ Compilar todos los proyectos
+      - name: 🏗️ Compilar solución (Release)
         run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
 
-      # 6️⃣ Ejecutar el análisis de CodeQL (sube resultados al panel de seguridad)
+      # Ejecutar el análisis de CodeQL y subir resultados a GitHub
       - name: 🔍 Ejecutar análisis de CodeQL
         uses: github/codeql-action/analyze@v3
 
-      # 7️⃣ (Opcional) Subir el archivo SARIF como artefacto para descarga local
+      # Diagnóstico: listar si hay SARIF generado en el workspace (ayuda a localizarlo si no lo encuentra el upload)
+      - name: 🔎 Buscar archivos SARIF generados (diagnóstico)
+        if: always()
+        run: |
+          echo "Buscando archivos .sarif en /home/runner/work..."
+          find /home/runner/work -type f -name "*.sarif" -print || echo "No se encontraron archivos .sarif"
+
+      # Subir el/los SARIF encontrados como artifact (glob amplio para cubrir rutas posibles)
       - name: 📦 Subir reporte SARIF (opcional)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: codeql-sarif
           path: |
+            /home/runner/work/**/*.sarif
             **/results/*.sarif
-            **/codeql-databases/**/*.sarif
-            /home/runner/work/_temp/codeql_databases/**/*.sarif
-
+            **/*.sarif
