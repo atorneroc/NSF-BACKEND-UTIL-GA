@@ -2,8 +2,9 @@ name: "CodeQL Scan"
 
 on:
   push:
-    branches: [ "main", "dev", "staging" ]
+    branches: [ "master" ]
   pull_request:
+    branches: [ "master" ]
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
@@ -25,7 +26,6 @@ jobs:
           languages: |
             dotnet
             javascript
-          # Si quisieras incluir python/java añade las entradas
-          # queries: security-and-quality
+
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v2
