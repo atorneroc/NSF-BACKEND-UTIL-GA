@@ -42,8 +42,8 @@ jobs:
         run: dotnet restore nsf-backend-util.sln
 
       # Compilar la solución completa para generar los binarios que CodeQL necesita
-      - name: 🏗️ Compilar solución
-        run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
+      - name: 🏗️ Compilar el proyecto
+        run: dotnet build --configuration Release --no-restore
 
       # Ejecutar el análisis y subir resultados a GitHub (Code scanning alerts)
       - name: 🔍 Ejecutar análisis de CodeQL
