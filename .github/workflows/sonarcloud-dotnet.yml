@@ -27,7 +27,7 @@ jobs:
 
       # 📦 3. Restaurar dependencias
       - name: 📦 Restaurar dependencias
-        run: dotnet restore nsf-backend-util.sln
+        run: dotnet restore
 
       # 🚀 4. Iniciar análisis SonarCloud
       - name: 🚀 Iniciar análisis SonarCloud
@@ -41,7 +41,7 @@ jobs:
 
       # 🏗️ 5. Compilar proyecto en modo Release
       - name: 🏗️ Compilar el proyecto
-        run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
+        run: dotnet build --configuration Release --no-restore
 
       # 🧪 6. (Opcional) Ejecutar pruebas unitarias
       - name: 🧪 Ejecutar pruebas
