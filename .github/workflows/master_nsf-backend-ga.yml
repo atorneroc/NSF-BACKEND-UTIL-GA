@@ -25,7 +25,7 @@ jobs:
     steps:
       # 🧰 1. Checkout del código fuente
       - name: 🧰 Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # ⚙️ 2. Configurar SDK .NET 8
       - name: ⚙️ Configurar .NET 8
