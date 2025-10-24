@@ -18,32 +18,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 🧰 1. Checkout del código fuente
       - name: 🧰 Checkout del código
         uses: actions/checkout@v5
 
-      # ⚙️ 2. Configurar SDK .NET 8
       - name: ⚙️ Configurar .NET 8
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
 
-      # 🧩 4. Verificar versión del SDK instalado
       - name: 🧩 Verificar versión de .NET
         run: dotnet --info
-
-      # 📦 5. Restaurar dependencias del proyecto
-      - name: 📦 Restaurar dependencias
-        run: dotnet restore
-
-      # 🏗️ 6. Compilar proyecto en modo Release
-      - name: 🏗️ Compilar el proyecto
-        run: dotnet build --configuration Release --no-restore
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: csharp,javascript
+          autobuild: true
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
