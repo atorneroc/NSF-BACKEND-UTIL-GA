@@ -18,9 +18,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout del código fuente
       - name: 🧰 Checkout del código
         uses: actions/checkout@v5
 
+      # 2️⃣ Instalar .NET 8 (compatible con tus proyectos)
       - name: ⚙️ Configurar .NET 8
         uses: actions/setup-dotnet@v5
         with:
@@ -29,7 +31,7 @@ jobs:
       - name: 🧩 Verificar versión de .NET
         run: dotnet --info
 
-      # Inicializa CodeQL en modo 'manual' (tú ejecutarás restore/build dentro del contexto)
+      # 3️⃣ Inicializar CodeQL (modo manual: tú controlas el build)
       - name: 🧪 Inicializar CodeQL
         uses: github/codeql-action/init@v3
         with:
@@ -37,20 +39,20 @@ jobs:
           build-mode: manual
           queries: security-and-quality
 
-      # Restaurar dependencias desde dentro del contexto CodeQL
-      - name: 📦 Restaurar dependencias
+      # 4️⃣ Restaurar dependencias de TODOS los proyectos de la solución
+      - name: 📦 Restaurar dependencias de la solución
         run: dotnet restore nsf-backend-util.sln
 
-      # Compilar la solución completa para generar los binarios que CodeQL necesita
-      - name: 🏗️ Compilar el proyecto
-        run: dotnet build --configuration Release --no-restore
+      # 5️⃣ Compilar todos los proyectos dentro de la solución
+      - name: 🏗️ Compilar todos los proyectos
+        run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
 
-      # Ejecutar el análisis y subir resultados a GitHub (Code scanning alerts)
+      # 6️⃣ Ejecutar el análisis de CodeQL (sube resultados al panel de seguridad)
       - name: 🔍 Ejecutar análisis de CodeQL
         uses: github/codeql-action/analyze@v3
 
-      # (Opcional) Guardar el/s SARIF generados como artifact para descargar y revisar localmente
-      - name: 📦 Subir reporte SARIF (opcional)
+      # 7️⃣ (Opcional) Subir el archivo SARIF como artefacto para descarga local
+      - name: 📦 Subir reporte SARIF
         if: always()
         uses: actions/upload-artifact@v4
         with:
