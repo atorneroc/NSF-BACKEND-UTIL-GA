@@ -52,7 +52,7 @@ jobs:
             /o:"atorneroc" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.login="${SONAR_TOKEN}" \
-            /d:sonar.projectBaseDir="." \
+            /d:sonar.projectBaseDir="${GITHUB_WORKSPACE}" \
             /d:sonar.sources="Scharff.API.Utils,Scharff.Application.Utils,Scharff.Domain.Utils,Scharff.Infrastructure.Http,Scharff.Infrastructure.Utils,Scharff.Infrastructure.AzureBlobStorage" \
             /d:sonar.exclusions="**/bin/**/*,**/obj/**/*,**/*.Test.cs,**/Migrations/**/*" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
