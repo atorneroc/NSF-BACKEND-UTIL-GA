@@ -1,0 +1,58 @@
+name: SonarCloud (.NET)
+
+on:
+  push:
+    branches: [ "main", "dev", "staging" ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build-and-scan:
+    name: Build, Test and SonarCloud Scan
+    runs-on: ubuntu-latest
+
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: 🧰 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # ✅ necesario para análisis completo y PRs
+
+      - name: ⚙️ Setup .NET 8
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 📦 Restore NuGet packages
+        run: dotnet restore nsf-backend-util.sln
+
+      - name: 🧩 Install SonarScanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner
+      - name: 🛠️ Add dotnet tools to PATH
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: 🔍 Begin SonarCloud Analysis
+        run: |
+          dotnet sonarscanner begin \
+            /k:"atorneroc_NSF-BACKEND-UTIL-GA" \
+            /o:"atorneroc" \
+            /d:sonar.login="${SONAR_TOKEN}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.coverage.exclusions="**/bin/**/*,**/obj/**/*,**/*.Test.cs,**/Migrations/**/*"
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: 🏗️ Build solution
+        run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
+
+      - name: 🧪 Run tests and collect coverage
+        run: dotnet test nsf-backend-util.sln --no-build --logger:trx --collect:"XPlat Code Coverage"
+
+      - name: 🚀 End SonarCloud Analysis
+        run: dotnet sonarscanner end /d:sonar.login="${SONAR_TOKEN}"
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
