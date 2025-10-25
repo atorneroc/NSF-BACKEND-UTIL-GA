@@ -1,0 +1,68 @@
+name: ".NET CI Template"
+
+on:
+  workflow_call:
+    inputs:
+      solution:
+        required: true
+        type: string
+      test_project:
+        required: true
+        type: string
+    outputs:
+      artifact_name:
+        description: "Nombre del artefacto publicado"
+        value: backend-artifact
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧰 Checkout del código
+        uses: actions/checkout@v5
+
+      - name: ⚙️ Configurar .NET 8
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 💾 Cache de dependencias NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: 📦 Restaurar dependencias
+        run: dotnet restore ${{ inputs.solution }}
+
+      - name: 🏗️ Compilar solución
+        run: dotnet build ${{ inputs.solution }} --configuration Release --no-restore
+
+      - name: 🧪 Ejecutar pruebas unitarias
+        run: |
+          dotnet test ${{ inputs.test_project }} \
+            --configuration Release \
+            --no-build \
+            --logger:"trx;LogFileName=test_results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: 📊 Subir resultados de prueba
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults
+
+      - name: 📦 Publicar artefactos compilados
+        run: dotnet publish ${{ inputs.solution }} -c Release -o ./publish
+
+      - name: 📤 Subir artefacto de build
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-artifact
+          path: ./publish
+          retention-days: 5

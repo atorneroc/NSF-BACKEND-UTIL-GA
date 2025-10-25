@@ -1,129 +1,41 @@
-name: Backend CI (.NET 8)
+name: "Backend CI/CD (.NET 8)"
 
-# 🔹 Se ejecuta en:
-# - push a master (build + deploy)
-# - pull request a master (solo build/test)
 on:
   push:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
 
-# 🔹 Permisos requeridos para autenticación OIDC (Azure)
 permissions:
   id-token: write
   contents: read
+  security-events: write
 
 jobs:
-  # ==============================================================
-  # 🧪 JOB 1: Integración Continua (Build + Test)
-  # ==============================================================
-  build:
-    name: 🧪 CI - Build & Test
-    runs-on: ubuntu-latest
+  ci:
+    uses: ./.github/workflows/templates/dotnet-ci.yml
+    with:
+      solution: "nsf-backend-util.sln"
+      test_project: "./Scharff.UnitTest/Scharff.UnitTest.csproj"
 
-    steps:
-      # 🧰 1. Checkout del código fuente
-      - name: 🧰 Checkout del código
-        uses: actions/checkout@v5
+  analyze:
+    needs: ci
+    uses: ./.github/workflows/templates/analyze-security.yml
+    with:
+      solution: "nsf-backend-util.sln"
+      sonar_project_key: "atorneroc_NSF-BACKEND-UTIL-GA"
+      sonar_org: "atorneroc"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # ⚙️ 2. Configurar SDK .NET 8
-      - name: ⚙️ Configurar .NET 8
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '8.0.x'
-
-      # 💾 3. Cache de dependencias NuGet (acelera builds)
-      - name: 💾 Cache de dependencias NuGet
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      # 🧩 4. Verificar versión del SDK instalado
-      - name: 🧩 Verificar versión de .NET
-        run: dotnet --info
-
-      # 📦 5. Restaurar dependencias del proyecto
-      - name: 📦 Restaurar dependencias
-        run: dotnet restore
-
-      # 🏗️ 6. Compilar proyecto en modo Release
-      - name: 🏗️ Compilar el proyecto
-        run: dotnet build --configuration Release --no-restore
-
-      # 🧪 7. Ejecutar pruebas unitarias
-      - name: 🧪 Ejecutar pruebas
-        run: dotnet test ./Scharff.UnitTest/Scharff.UnitTest.csproj --verbosity normal --logger "trx;LogFileName=test_results.trx"
-
-      # 📊 8. Publicar resultados de las pruebas
-      - name: 📊 Publicar resultados de pruebas
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: '**/test_results.trx'
-
-      # 📤 9. Publicar artefactos para despliegue
-      - name: 📤 Publicar artefactos
-        run: dotnet publish ./Scharff.API.Utils/Scharff.API.Utils.csproj -c Release -o ./publish
-        if: success()
-
-      # 📦 10. Subir artefacto compilado
-      - name: 📦 Subir artefacto de build
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-artifact
-          path: ./publish
-          retention-days: 5  # Mantener artefactos por 5 días
-
-  # ==============================================================
-  # 🚀 JOB 2: Despliegue en Azure (solo en push, no PR)
-  # ==============================================================
   deploy:
-    name: 🚀 CD - Deploy to Azure
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' # 👈 solo despliega si fue un PUSH a master, no en PRs
-
-    steps:
-      # 🧰 1. Descargar artefacto del job anterior
-      - name: 🧰 Descargar artefacto del pipeline de CI
-        uses: actions/download-artifact@v5
-        with:
-          name: backend-artifact
-          path: ./publish
-
-      # ✅ 2. Validar que el artefacto exista
-      - name: ✅ Validar artefacto
-        run: |
-          if [ ! -d "./publish" ]; then
-            echo "❌ El artefacto no fue descargado correctamente. Verifica el pipeline de CI."
-            exit 1
-          fi
-          echo "✅ Artefacto validado correctamente. Listo para desplegar."
-
-      # 📁 3. Mostrar estructura del artefacto (útil para debug)
-      - name: 📁 Mostrar estructura del artefacto
-        run: tree ./publish || ls -R ./publish
-
-      # 🔐 4. Login en Azure usando OIDC (sin secrets persistentes)
-      - name: 🔐 Login en Azure usando OIDC
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          enable-oidc: true
-
-      # 🚀 5. Desplegar en Azure App Service
-      - name: 🚀 Desplegar en Azure App Service usando OIDC
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'nsf-backend-ga'
-          slot-name: 'production'
-          package: ./publish
-          runtime-stack: 'DOTNETCORE|8.0'
-          startup-command: 'dotnet Scharff.API.Utils.dll'
+    needs: ci
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/templates/deploy-azure.yml
+    with:
+      app_name: "nsf-backend-ga"
+      slot: "production"
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}

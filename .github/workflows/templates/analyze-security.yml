@@ -1,0 +1,85 @@
+name: "Security Analysis Template"
+
+on:
+  workflow_call:
+    inputs:
+      solution:
+        required: true
+        type: string
+      sonar_project_key:
+        required: true
+        type: string
+      sonar_org:
+        required: true
+        type: string
+    secrets:
+      SONAR_TOKEN:
+        required: true
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: 🧰 Checkout del código
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: ⚙️ Configurar .NET 8
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      # -----------------------
+      # 🔍 CodeQL
+      # -----------------------
+      - name: 🧪 Inicializar CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          build-mode: manual
+          queries: security-and-quality
+
+      - name: 🏗️ Compilar proyecto
+        run: |
+          dotnet restore ${{ inputs.solution }}
+          dotnet build ${{ inputs.solution }} --configuration Release --no-restore
+
+      - name: 🔎 Ejecutar análisis CodeQL
+        uses: github/codeql-action/analyze@v3
+
+      # -----------------------
+      # 🧭 SonarCloud
+      # -----------------------
+      - name: 🧩 Instalar SonarScanner
+        run: |
+          dotnet tool update --global dotnet-sonarscanner || dotnet tool install --global dotnet-sonarscanner
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: 🚀 Análisis SonarCloud Begin
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${{ inputs.sonar_project_key }}" \
+            /o:"${{ inputs.sonar_org }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**"
+
+      - name: 🏗️ Build para Sonar
+        run: dotnet build ${{ inputs.solution }} --configuration Release --no-restore
+
+      - name: 🧪 Tests con cobertura
+        run: |
+          dotnet test ./Scharff.UnitTest/Scharff.UnitTest.csproj \
+            --configuration Release \
+            --no-build \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: 🏁 Finalizar análisis SonarCloud
+        run: dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
