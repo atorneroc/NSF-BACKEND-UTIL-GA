@@ -24,6 +24,12 @@ jobs:
       contents: read
       security-events: write
 
+    env:
+      SOLUTION_PATH: ${{ inputs.solution }}
+      SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
+      SONAR_ORG: ${{ inputs.sonar_org }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
     steps:
       - name: 🧰 Checkout del código
         uses: actions/checkout@v5
@@ -46,10 +52,10 @@ jobs:
           queries: security-and-quality
 
       - name: 🏗️ Compilar proyecto
-        env:
-          SOLUTION_PATH: ${{ inputs.solution }}
         run: |
+          echo "🔍 Restaurando dependencias para $SOLUTION_PATH"
           dotnet restore "$SOLUTION_PATH"
+          echo "🏗️ Compilando proyecto $SOLUTION_PATH en modo Release"
           dotnet build "$SOLUTION_PATH" --configuration Release --no-restore
 
       - name: 🔎 Ejecutar análisis CodeQL
@@ -66,10 +72,10 @@ jobs:
       - name: 🚀 Análisis SonarCloud Begin
         run: |
           dotnet sonarscanner begin \
-            /k:"${{ inputs.sonar_project_key }}" \
-            /o:"${{ inputs.sonar_org }}" \
+            /k:"$SONAR_PROJECT_KEY" \
+            /o:"$SONAR_ORG" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.login="$SONAR_TOKEN" \
             /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**"
 
       - name: 🏗️ Build para Sonar
@@ -84,4 +90,4 @@ jobs:
             --results-directory ./TestResults
 
       - name: 🏁 Finalizar análisis SonarCloud
-        run: dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+        run: dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"

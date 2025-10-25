@@ -18,6 +18,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      SOLUTION_PATH: ${{ inputs.solution }}
+      TEST_PROJECT_PATH: ${{ inputs.test_project }}
+
     steps:
       - name: 🧰 Checkout del código
         uses: actions/checkout@v5
@@ -36,14 +40,14 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: 📦 Restaurar dependencias
-        run: dotnet restore ${{ inputs.solution }}
+        run: dotnet restore "$SOLUTION_PATH"
 
       - name: 🏗️ Compilar solución
-        run: dotnet build ${{ inputs.solution }} --configuration Release --no-restore
+        run: dotnet build "$SOLUTION_PATH" --configuration Release --no-restore
 
       - name: 🧪 Ejecutar pruebas unitarias
         run: |
-          dotnet test ${{ inputs.test_project }} \
+          dotnet test "$TEST_PROJECT_PATH" \
             --configuration Release \
             --no-build \
             --logger:"trx;LogFileName=test_results.trx" \
@@ -58,7 +62,7 @@ jobs:
           path: ./TestResults
 
       - name: 📦 Publicar artefactos compilados
-        run: dotnet publish ${{ inputs.solution }} -c Release -o ./publish
+        run: dotnet publish "$SOLUTION_PATH" -c Release -o ./publish
 
       - name: 📤 Subir artefacto de build
         uses: actions/upload-artifact@v4
