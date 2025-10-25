@@ -13,14 +13,14 @@ permissions:
 
 jobs:
   ci:
-    uses: ./.github/workflows/templates/dotnet-ci.yml
+    uses: ./.github/workflows/dotnet-ci.yml
     with:
       solution: "nsf-backend-util.sln"
       test_project: "./Scharff.UnitTest/Scharff.UnitTest.csproj"
 
   analyze:
     needs: ci
-    uses: ./.github/workflows/templates/analyze-security.yml
+    uses: ./.github/workflows/analyze-security.yml
     with:
       solution: "nsf-backend-util.sln"
       sonar_project_key: "atorneroc_NSF-BACKEND-UTIL-GA"
@@ -31,7 +31,7 @@ jobs:
   deploy:
     needs: ci
     if: github.event_name == 'push'
-    uses: ./.github/workflows/templates/deploy-azure.yml
+    uses: ./.github/workflows/deploy-azure.yml
     with:
       app_name: "nsf-backend-ga"
       slot: "production"
