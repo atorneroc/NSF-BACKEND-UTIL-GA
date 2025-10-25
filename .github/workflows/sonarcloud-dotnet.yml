@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "master" ]
   pull_request:
-    branches: [ "master" ]
     types: [opened, synchronize, reopened]
 
 permissions:
@@ -13,82 +12,63 @@ permissions:
   security-events: write
 
 jobs:
-  sonarcloud:
-    name: 🔍 Análisis de SonarCloud
+  build-and-analyze:
     runs-on: ubuntu-latest
-
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      # 🧰 1. Checkout del código
       - name: 🧰 Checkout del código
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ⚙️ 2. Configurar .NET 8
       - name: ⚙️ Configurar .NET 8
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      # 💾 3. Restaurar dependencias
+      - name: 💾 Cache de dependencias NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: 📦 Restaurar dependencias
         run: dotnet restore nsf-backend-util.sln
 
-      # 🧩 4. Instalar SonarScanner
-      - name: 🧩 Instalar dotnet-sonarscanner
-        run: dotnet tool install --global dotnet-sonarscanner
-
-      - name: 🛠️ Agregar herramientas .NET al PATH
-        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-      # 📂 5. Mostrar estructura (debug)
-      - name: 📂 Mostrar estructura del workspace
+      - name: 🧩 Instalar SonarScanner si no existe
         run: |
-          echo "📁 Directorio actual: $(pwd)"
-          ls -R | head -n 100
+          dotnet tool update --global dotnet-sonarscanner || dotnet tool install --global dotnet-sonarscanner
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-      # 🚀 6. Iniciar análisis SonarCloud
-      - name: 🔍 Begin SonarCloud Analysis
+      - name: 🚀 Análisis SonarCloud Begin
         run: |
           dotnet sonarscanner begin \
             /k:"atorneroc_NSF-BACKEND-UTIL-GA" \
             /o:"atorneroc" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.login="${SONAR_TOKEN}" \
-            /d:sonar.projectBaseDir="." \
-            /d:sonar.sources="." \
-            /d:sonar.inclusions="**/*.cs" \
-            /d:sonar.exclusions="**/bin/**/*,**/obj/**/*,**/*.Test.cs,**/Migrations/**/*" \
-            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
-            /d:sonar.coverage.exclusions="**/bin/**/*,**/obj/**/*,**/Migrations/**/*" \
-            /d:sonar.verbose=true
+            /d:sonar.exclusions="**/bin/**,**/obj/**,**/*.Test.cs,**/Migrations/**" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
 
-      # 🏗️ 7. Compilar proyecto (Release)
       - name: 🏗️ Compilar proyecto
         run: dotnet build nsf-backend-util.sln --configuration Release --no-restore
 
-      # 🧪 8. Ejecutar pruebas unitarias con cobertura
       - name: 🧪 Ejecutar pruebas con cobertura
         run: |
           dotnet test ./Scharff.UnitTest/Scharff.UnitTest.csproj \
-            --no-build \
             --configuration Release \
+            --no-build \
             --logger:"trx;LogFileName=test_results.trx" \
             --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+            --results-directory ./TestResults
 
-      # 🏁 9. Finalizar análisis SonarCloud
-      - name: 🏁 End SonarCloud Analysis
+      - name: 🏁 Finalizar análisis SonarCloud
         run: dotnet sonarscanner end /d:sonar.login="${SONAR_TOKEN}"
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # 📊 10. Publicar resultados de pruebas
       - name: 📊 Publicar resultados de pruebas
         if: always()
         uses: actions/upload-artifact@v4
