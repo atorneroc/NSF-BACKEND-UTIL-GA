@@ -14,9 +14,6 @@ on:
         description: "Nombre del artefacto publicado"
         value: backend-artifact
 
-permissions:
-  inherit: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
