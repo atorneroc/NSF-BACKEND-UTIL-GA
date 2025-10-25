@@ -46,9 +46,11 @@ jobs:
           queries: security-and-quality
 
       - name: 🏗️ Compilar proyecto
+        env:
+          SOLUTION_PATH: ${{ inputs.solution }}
         run: |
-          dotnet restore ${{ inputs.solution }}
-          dotnet build ${{ inputs.solution }} --configuration Release --no-restore
+          dotnet restore "$SOLUTION_PATH"
+          dotnet build "$SOLUTION_PATH" --configuration Release --no-restore
 
       - name: 🔎 Ejecutar análisis CodeQL
         uses: github/codeql-action/analyze@v3
@@ -71,7 +73,7 @@ jobs:
             /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**"
 
       - name: 🏗️ Build para Sonar
-        run: dotnet build ${{ inputs.solution }} --configuration Release --no-restore
+        run: dotnet build "$SOLUTION_PATH" --configuration Release --no-restore
 
       - name: 🧪 Tests con cobertura
         run: |
