@@ -2,9 +2,9 @@ name: "CodeQL Scan"
 
 on:
   push:
-    branches: [ "masterD" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "masterD" ]
+    branches: [ "master" ]
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:

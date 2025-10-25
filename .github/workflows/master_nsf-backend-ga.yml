@@ -5,9 +5,9 @@ name: Backend CI (.NET 8)
 # - pull request a master (solo build/test)
 on:
   push:
-    branches: [ "masterD" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "masterD" ]
+    branches: [ "master" ]
 
 # 🔹 Permisos requeridos para autenticación OIDC (Azure)
 permissions:
