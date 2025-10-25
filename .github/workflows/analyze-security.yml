@@ -14,7 +14,10 @@ on:
         type: string
     secrets:
       SONAR_TOKEN:
-        required: true
+        required: true        
+
+permissions:
+  inherit: true
 
 jobs:
   security-scan:

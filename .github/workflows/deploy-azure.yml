@@ -17,6 +17,9 @@ on:
       AZURE_SUBSCRIPTION_ID:
         required: true
 
+permissions:
+  inherit: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

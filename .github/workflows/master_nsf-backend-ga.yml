@@ -9,15 +9,22 @@ on:
 permissions:
   id-token: write
   contents: read
+  actions: read
   security-events: write
 
 jobs:
+  # -------------------------------
+  # 🧪 CI: Build + Test
+  # -------------------------------
   ci:
     uses: ./.github/workflows/dotnet-ci.yml
     with:
       solution: "nsf-backend-util.sln"
       test_project: "./Scharff.UnitTest/Scharff.UnitTest.csproj"
 
+  # -------------------------------
+  # 🔍 Análisis de seguridad
+  # -------------------------------
   analyze:
     needs: ci
     uses: ./.github/workflows/analyze-security.yml
@@ -27,7 +34,14 @@ jobs:
       sonar_org: "atorneroc"
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
+  # -------------------------------
+  # 🚀 Despliegue Azure (solo en push)
+  # -------------------------------
   deploy:
     needs: ci
     if: github.event_name == 'push'
