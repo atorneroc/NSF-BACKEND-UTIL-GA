@@ -76,6 +76,8 @@ jobs:
             /o:"$SONAR_ORG" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.login="$SONAR_TOKEN" \
+            /d:sonar.analysis.key="${{ github.run_id }}" \
+            /d:sonar.analysis.name="CI-${{ github.run_number }}" \
             /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**"
 
       - name: 🏗️ Build para Sonar
