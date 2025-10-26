@@ -45,7 +45,7 @@ jobs:
       # 🔍 CodeQL
       # -----------------------
       - name: 🧪 Inicializar CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: csharp
           build-mode: manual
@@ -59,7 +59,7 @@ jobs:
           dotnet build "$SOLUTION_PATH" --configuration Release --no-restore
 
       - name: 🔎 Ejecutar análisis CodeQL
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
 
       # -----------------------
       # 🧭 SonarCloud
