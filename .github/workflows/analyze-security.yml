@@ -29,6 +29,8 @@ jobs:
       SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
       SONAR_ORG: ${{ inputs.sonar_org }}
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SHOULD_RUN_SONAR: ${{ github.actor != 'dependabot[bot]' }}
+
 
     steps:
       - name: 🧰 Checkout del código
@@ -65,11 +67,13 @@ jobs:
       # 🧭 SonarCloud
       # -----------------------
       - name: 🧩 Instalar SonarScanner
+        if: env.SHOULD_RUN_SONAR == 'true'
         run: |
           dotnet tool update --global dotnet-sonarscanner || dotnet tool install --global dotnet-sonarscanner
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: 🚀 Análisis SonarCloud Begin
+        if: env.SHOULD_RUN_SONAR == 'true'
         run: |
           dotnet sonarscanner begin \
             /k:"$SONAR_PROJECT_KEY" \
@@ -81,9 +85,11 @@ jobs:
             /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**"
 
       - name: 🏗️ Build para Sonar
+        if: env.SHOULD_RUN_SONAR == 'true'
         run: dotnet build "$SOLUTION_PATH" --configuration Release --no-restore
 
       - name: 🧪 Tests con cobertura
+        if: env.SHOULD_RUN_SONAR == 'true'
         run: |
           dotnet test ./Scharff.UnitTest/Scharff.UnitTest.csproj \
             --configuration Release \
@@ -92,4 +98,5 @@ jobs:
             --results-directory ./TestResults
 
       - name: 🏁 Finalizar análisis SonarCloud
+        if: env.SHOULD_RUN_SONAR == 'true'
         run: dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
