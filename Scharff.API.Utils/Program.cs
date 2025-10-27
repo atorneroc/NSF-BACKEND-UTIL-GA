@@ -61,7 +61,10 @@ builder.Services.AddSwaggerGen();
 builder.Configuration.AddJsonFile("secrets/appsettings.secrets.json", optional: true);
 builder.Services.AddTransient<IDbConnection>(x => new NpgsqlConnection(builder.Configuration.GetConnectionString("DB_CONN_STR")));
 
-string[] origins = builder.Configuration.GetValue<string>("Origins").Split(",");
+var originsValue = builder.Configuration.GetValue<string>("Origins");
+string[] origins = (originsValue ?? string.Empty)
+    .Split(",", StringSplitOptions.RemoveEmptyEntries);
+
 
 builder.Services.AddCors(options =>
 {

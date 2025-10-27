@@ -2,9 +2,9 @@ name: "Backend CI/CD (.NET 8)"
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "masterD" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "masterD" ]
 
 permissions:
   id-token: write
