@@ -32,10 +32,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: ⚙️ Configurar Docker Buildx
-        uses: docker/setup-buildx-action@1d7e2dfef5c86a0cbb7921dc0e69e2d460b13e6b
+        uses: docker/setup-buildx-action@2b51285b6b0c8b4a1431a5d7ad10423e4d8ce3a9
 
       - name: 🔐 Login a Azure (OIDC)
-        uses: azure/login@f43e5de4b4b82cbdf944e3d27d5a8a866c16ce2d 
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5  
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
@@ -52,7 +52,7 @@ jobs:
 
       # 🚨 Si hay vulnerabilidades HIGH o CRITICAL, falla el pipeline
       - name: 🧪 Escaneo de vulnerabilidades con Trivy (bloqueante)
-        uses: aquasecurity/trivy-action@b3587e073986051331fdccec6dc2f3d5d2239a43
+        uses: aquasecurity/trivy-action@f3eb52dd8183a222151b845e4e659cf0b0541de8
         with:
           image-ref: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.TAG }}
           format: 'table'
