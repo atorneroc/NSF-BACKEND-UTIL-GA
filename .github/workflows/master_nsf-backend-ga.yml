@@ -45,6 +45,7 @@ jobs:
 
     # 🐳 Build + Scan + Push a ACR
   docker:
+    if: github.event_name == 'push'
     needs: [ci, analyze]
     uses: ./.github/workflows/docker-build-acr.yml
     secrets:
