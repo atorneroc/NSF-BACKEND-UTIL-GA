@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: ⚙️ Configurar Docker Buildx
-        uses: docker/setup-buildx-action@2b51285b6b0c8b4a1431a5d7ad10423e4d8ce3a9
+        uses: docker/setup-buildx-action@988b5a0280414f7cd8a77cfb5c35aa22c0059a2f
 
       - name: 🔐 Login a Azure (OIDC)
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5  
