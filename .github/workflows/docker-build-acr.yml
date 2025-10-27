@@ -35,7 +35,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: 🔐 Login a Azure (OIDC)
-        uses: azure/login@v2
+        uses: azure/login@f43e5de4b4b82cbdf944e3d27d5a8a866c16ce2d 
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
