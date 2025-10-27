@@ -2,9 +2,9 @@ name: "Backend CI/CD (.NET 8)"
 
 on:
   push:
-    branches: [ "masterD" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "masterD" ]
+    branches: [ "master" ]
 
 permissions:
   id-token: write
@@ -42,9 +42,19 @@ jobs:
   # -------------------------------
   # 🚀 Despliegue Azure (solo en push)
   # -------------------------------
+
+    # 🐳 Build + Scan + Push a ACR
+  docker:
+    needs: [ci, analyze]
+    uses: ./.github/workflows/docker-build-acr.yml
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
   deploy:
-    needs: ci
-    if: github.event_name == 'push'
+    needs: docker
+    if: ${{ success() && github.event_name == 'push' }}
     uses: ./.github/workflows/deploy-azure.yml
     with:
       app_name: "nsf-backend-ga"

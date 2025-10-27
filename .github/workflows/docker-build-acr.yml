@@ -1,22 +1,28 @@
 name: "🐳 Build, Scan & Push Docker Image to ACR"
 
 on:
-  push:
-    branches: [ "master" ]
-  workflow_dispatch:
+  workflow_call:
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
 
 permissions:
   id-token: write
   contents: read
 
 env:
-  ACR_NAME: nsfacrdev         # 👈 reemplaza con tu ACR real
+  ACR_NAME: nsfacrdev             # 👈 reemplaza con tu ACR real
   IMAGE_NAME: nsf-backend-util
   TAG: ${{ github.run_number }}
 
 jobs:
   build-scan-push:
     runs-on: ubuntu-latest
+    name: 🏗️ Build + Scan + Push ACR
 
     steps:
       - name: 🧰 Checkout del código
@@ -41,22 +47,26 @@ jobs:
         run: |
           docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$TAG .
 
-      - name: 🧪 Escaneo de vulnerabilidades con Trivy
+      # 🚨 Si hay vulnerabilidades HIGH o CRITICAL, falla el pipeline
+      - name: 🧪 Escaneo de vulnerabilidades con Trivy (bloqueante)
         uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.TAG }}
           format: 'table'
-          exit-code: '0'
-          ignore-unfixed: true
           vuln-type: 'os,library'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'            # ⚠️ Falla el job si encuentra HIGH/CRITICAL
+          ignore-unfixed: true
           output: 'trivy-report.txt'
 
       - name: 📊 Subir reporte Trivy como artefacto
+        if: always()                # 📁 se sube aunque falle
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
           path: trivy-report.txt
 
       - name: 🚀 Push de la imagen al ACR
+        if: success()               # 🚫 Solo si no hubo vulnerabilidades graves
         run: |
           docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$TAG
