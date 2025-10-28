@@ -12,51 +12,18 @@ permissions:
   actions: read
   security-events: write
 
-jobs:
-  # -------------------------------
-  # 🧪 CI: Build + Test
-  # -------------------------------
-  ci:
-    uses: ./.github/workflows/dotnet-ci.yml
-    with:
-      solution: "nsf-backend-util.sln"
-      test_project: "./Scharff.UnitTest/Scharff.UnitTest.csproj"
 
 
 
-  # -------------------------------
-  # 🐳 Build + Scan + Push a ACR
-  # -------------------------------
-  docker:
-    if: github.event_name == 'push'
-    needs: ci
-    uses: ./.github/workflows/docker-build-acr.yml
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-  # -------------------------------
-  # 🚀 Despliegue 1: App Service por Código
-  # -------------------------------
-  deploy:
-    if: ${{ success() && github.event_name == 'push' }}
-    needs: docker
-    uses: ./.github/workflows/deploy-azure.yml
-    with:
-      app_name: "nsf-backend-ga"
-      slot: "production"
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+
 
   # -------------------------------
   # 🚀 Despliegue 2: App Service por Contenedor
   # -------------------------------
   deploy-container:
-    if: ${{ success() && github.event_name == 'push' }}
-    needs: docker
+    if: ${{ github.event_name == 'push' }}
     uses: ./.github/workflows/deploy-azure-container.yml
     with:
       app_name: "nsf-backend-ga-cont"          # 👈 tu App Service basado en ACR

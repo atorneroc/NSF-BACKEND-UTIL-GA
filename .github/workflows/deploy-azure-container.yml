@@ -46,18 +46,26 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           enable-oidc: true
 
+      - name: 🧩 Verificar versión Azure CLI
+        run: az version
+
+      - name: 🔄 Actualizar Azure CLI
+        run: |
+          echo "🔄 Actualizando Azure CLI a la última versión..."
+          sudo az upgrade --yes
+
       - name: 🔐 Login a ACR
         run: |
           az acr login --name $ACR_NAME
 
-      - name: 🚀 Actualizar App Service para usar nueva imagen
+      - name: 🔁 Actualizar App Service para usar nueva imagen
         run: |
           echo "🔁 Actualizando imagen en $APP_NAME..."
           az webapp config container set \
             --name $APP_NAME \
             --resource-group scharff-nsf-dev-rg \
-            --docker-custom-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:latest" \
-            --docker-registry-server-url "https://$ACR_NAME.azurecr.io"
+            --container-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:latest" \
+            --container-registry-url "https://$ACR_NAME.azurecr.io"
 
       - name: 🔄 Reiniciar App Service
         run: |
