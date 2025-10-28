@@ -13,10 +13,32 @@ on:
       artifact_name:
         description: "Nombre del artefacto publicado"
         value: backend-artifact
+     # nuevo: salida de versión
+      version:
+        description: "Versión generada automáticamente"
+        value: ${{ jobs.build.outputs.version }}
+
+permissions:
+  contents: read
+  actions: read
+
+# 🔄 Evita ejecuciones paralelas en la misma rama
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      # url: https://nsf-backend-ga.azurewebsites.net  # opcional
+    strategy:
+      matrix:
+        dotnet: [ '8.0.x' ]  # puedes agregar '9.0-preview' más adelante
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     env:
       SOLUTION_PATH: ${{ inputs.solution }}
@@ -26,10 +48,10 @@ jobs:
       - name: 🧰 Checkout del código
         uses: actions/checkout@v5
 
-      - name: ⚙️ Configurar .NET 8
+      - name: ⚙️ Configurar .NET ${{ matrix.dotnet }}
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: ${{ matrix.dotnet }}
 
       - name: 💾 Cache de dependencias NuGet
         uses: actions/cache@v4
@@ -38,6 +60,13 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
+
+      - name: 🏷️ Generar versión
+        id: version
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "🔖 Versión generada: $VERSION"
 
       - name: 📦 Restaurar dependencias
         run: dotnet restore "$SOLUTION_PATH"
@@ -70,3 +99,17 @@ jobs:
           name: backend-artifact
           path: ./publish
           retention-days: 5
+
+      - name: 📣 Notificar resultado en Teams
+        if: always()
+        uses: skitionek/notify-microsoft-teams@v2
+        with:
+          webhook_url: ${{ secrets.MS_TEAMS_WEBHOOK }}
+          message: |
+            ${{ job.status == 'success' && '🟢 **Build exitosa**' || '🔴 **Build fallida**' }}
+            **Workflow:** ${{ github.workflow }}
+            **Versión:** ${{ steps.version.outputs.version }}
+            **Branch:** ${{ github.ref_name }}
+            **Actor:** ${{ github.actor }}
+            **Ejecutado:** ${{ github.run_id }}
+          theme_color: ${{ job.status == 'success' && '00FF00' || 'FF0000' }}
