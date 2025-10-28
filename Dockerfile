@@ -4,7 +4,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copiamos los proyectos individualmente para aprovechar la caché
+# Copiar los archivos de solución y proyectos para aprovechar la caché
 COPY ["nsf-backend-util.sln", "./"]
 
 COPY ["Scharff.API.Utils/Scharff.API.Utils.csproj", "Scharff.API.Utils/"]
@@ -14,13 +14,13 @@ COPY ["Scharff.Infrastructure.AzureBlobStorage/Scharff.Infrastructure.AzureBlobS
 COPY ["Scharff.Infrastructure.Http/Scharff.Infrastructure.Http.csproj", "Scharff.Infrastructure.Http/"]
 COPY ["Scharff.Infrastructure.Utils/Scharff.Infrastructure.PostgreSQL.csproj", "Scharff.Infrastructure.Utils/"]
 
-# Restauramos dependencias
+# Restaurar dependencias
 RUN dotnet restore "Scharff.API.Utils/Scharff.API.Utils.csproj"
 
-# Copiamos todo el código fuente
+# Copiar el código fuente completo
 COPY . .
 
-# Compilamos y publicamos en modo Release
+# Compilar y publicar en modo Release
 WORKDIR "/src/Scharff.API.Utils"
 RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
@@ -30,10 +30,12 @@ RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Configuramos el puerto
+# Configurar el puerto de la aplicación
 ENV ASPNETCORE_URLS=http://+:5002
+EXPOSE 5002 
+# 👈 Importante para que Azure detecte el puerto expuesto
 
-# Copiamos solo el resultado del publish
+# Copiar solo los archivos publicados
 COPY --from=build /app/publish .
 
 # Punto de entrada
