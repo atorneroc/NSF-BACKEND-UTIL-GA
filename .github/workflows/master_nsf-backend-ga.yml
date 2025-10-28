@@ -46,7 +46,6 @@ jobs:
     if: github.event_name == 'push'
     needs: [ci, analyze]
     uses: ./.github/workflows/docker-build-acr.yml
-    id: docker-job   # 👈 importante para referenciar outputs
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
