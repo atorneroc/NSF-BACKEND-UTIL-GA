@@ -14,17 +14,6 @@ permissions:
 
 jobs:
 
-  # -------------------------------
-  # 🐳 Build + Scan + Push a ACR
-  # -------------------------------
-  docker:
-    if: github.event_name == 'push'
-    uses: ./.github/workflows/docker-build-acr.yml
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
 
   # -------------------------------
   # 🚀 Despliegue 2: App Service por Contenedor
@@ -37,7 +26,7 @@ jobs:
       app_name: "nsf-backend-ga-cont"          # 👈 tu App Service basado en ACR
       acr_name: "nsfacrdev"
       image_name: "nsf-backend-util"
-      image_tag: "92"
+      image_tag: "99"
       slot: "production"
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
