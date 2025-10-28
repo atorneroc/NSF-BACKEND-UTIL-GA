@@ -56,9 +56,8 @@ jobs:
           az webapp config container set \
             --name $APP_NAME \
             --resource-group scharff-nsf-dev-rg \
-            --docker-custom-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG" \
-            --docker-registry-server-url "https://$ACR_NAME.azurecr.io" \
-            --enable-managed-identity true
+            --docker-custom-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:latest" \
+            --docker-registry-server-url "https://$ACR_NAME.azurecr.io"
 
       - name: 🔄 Reiniciar App Service
         run: |

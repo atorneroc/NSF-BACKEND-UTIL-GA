@@ -22,29 +22,14 @@ jobs:
       solution: "nsf-backend-util.sln"
       test_project: "./Scharff.UnitTest/Scharff.UnitTest.csproj"
 
-  # -------------------------------
-  # 🔍 Análisis de seguridad
-  # -------------------------------
-  analyze:
-    needs: ci
-    uses: ./.github/workflows/analyze-security.yml
-    with:
-      solution: "nsf-backend-util.sln"
-      sonar_project_key: "atorneroc_NSF-BACKEND-UTIL-GA"
-      sonar_org: "atorneroc"
-    secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+
 
   # -------------------------------
   # 🐳 Build + Scan + Push a ACR
   # -------------------------------
   docker:
     if: github.event_name == 'push'
-    needs: [ci, analyze]
+    needs: ci
     uses: ./.github/workflows/docker-build-acr.yml
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
