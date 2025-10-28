@@ -20,7 +20,6 @@ jobs:
   # -------------------------------
   deploy-container:
     if: ${{ github.event_name == 'push' }}
-    needs: docker
     uses: ./.github/workflows/deploy-azure-container.yml
     with:
       app_name: "nsf-backend-ga-cont"          # 👈 tu App Service basado en ACR
