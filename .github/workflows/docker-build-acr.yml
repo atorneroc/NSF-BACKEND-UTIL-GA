@@ -52,7 +52,7 @@ jobs:
 
       # 🚨 Si hay vulnerabilidades HIGH o CRITICAL, falla el pipeline
       - name: 🧪 Escaneo de vulnerabilidades con Trivy (bloqueante)
-        uses: aquasecurity/trivy-action@f3eb52dd8183a222151b845e4e659cf0b0541de8
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8
         with:
           image-ref: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.TAG }}
           format: 'table'
