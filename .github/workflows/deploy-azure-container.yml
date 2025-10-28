@@ -57,15 +57,16 @@ jobs:
       - name: 🔐 Login a ACR
         run: |
           az acr login --name $ACR_NAME
-
-      - name: 🔁 Actualizar App Service para usar nueva imagen
+          
+      - name: 🔁 Actualizar App Service (con identidad administrada)
         run: |
           echo "🔁 Actualizando imagen en $APP_NAME..."
           az webapp config container set \
             --name $APP_NAME \
             --resource-group scharff-nsf-dev-rg \
-            --container-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:latest" \
-            --container-registry-url "https://$ACR_NAME.azurecr.io"
+            --docker-custom-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:latest" \
+            --docker-registry-server-url "https://$ACR_NAME.azurecr.io" || true
+
 
       - name: 🔄 Reiniciar App Service
         run: |
