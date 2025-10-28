@@ -1,4 +1,4 @@
-name: "Backend CI/CD (.NET 8)"
+name: "Backend CI/CD (.NET 8 + Azure)"
 
 on:
   push:
@@ -21,11 +21,10 @@ jobs:
     with:
       solution: "nsf-backend-util.sln"
       test_project: "./Scharff.UnitTest/Scharff.UnitTest.csproj"
-    secrets:
-      MS_TEAMS_WEBHOOK: ${{ secrets.MS_TEAMS_WEBHOOK }}
+    secrets: inherit
 
   # -------------------------------
-  # 🔍 Análisis de seguridad
+  # 🔍 Análisis de seguridad (CodeQL + SonarCloud)
   # -------------------------------
   analyze:
     needs: ci
@@ -34,12 +33,7 @@ jobs:
       solution: "nsf-backend-util.sln"
       sonar_project_key: "atorneroc_NSF-BACKEND-UTIL-GA"
       sonar_org: "atorneroc"
-    secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+    secrets: inherit
 
   # -------------------------------
   # 🐳 Build + Scan + Push a ACR
@@ -48,10 +42,7 @@ jobs:
     if: github.event_name == 'push'
     needs: [ci, analyze]
     uses: ./.github/workflows/docker-build-acr.yml
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    secrets: inherit
 
   # -------------------------------
   # 🚀 Despliegue 1: App Service por Código
@@ -63,10 +54,7 @@ jobs:
     with:
       app_name: "nsf-backend-ga"
       slot: "production"
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    secrets: inherit
 
   # -------------------------------
   # 🚀 Despliegue 2: App Service por Contenedor
@@ -76,12 +64,9 @@ jobs:
     needs: docker
     uses: ./.github/workflows/deploy-azure-container.yml
     with:
-      app_name: "nsf-backend-ga-cont"          # 👈 tu App Service basado en ACR
+      app_name: "nsf-backend-ga-cont"          # 👈 App Service con ACR
       acr_name: "nsfacrdev"
       image_name: "nsf-backend-util"
-      image_tag: ${{ needs.docker.outputs.tag }}
+      image_tag: ${{ needs.docker.outputs.version }}
       slot: "production"
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    secrets: inherit

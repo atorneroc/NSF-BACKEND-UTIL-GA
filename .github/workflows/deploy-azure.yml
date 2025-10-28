@@ -16,10 +16,24 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
+      MS_TEAMS_WEBHOOK:
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+
+# 🔄 Evita despliegues simultáneos
+concurrency:
+  group: deploy-${{ inputs.app_name }}-${{ inputs.slot }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
+    name: 🚀 Deploy Azure App Service (ZIP)
     runs-on: ubuntu-latest
+    environment:
+      name: production
 
     env:
       APP_NAME: ${{ inputs.app_name }}
@@ -27,6 +41,10 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      RESOURCE_GROUP: scharff-nsf-dev-rg
+
+    outputs:
+      deployment_status: ${{ steps.status.outputs.state }}
 
     steps:
       - name: 🧰 Descargar artefacto del build
@@ -38,9 +56,10 @@ jobs:
       - name: ✅ Validar artefacto
         run: |
           if [ ! -d "./publish" ]; then
-            echo "❌ No se encontró el artefacto."
+            echo "❌ No se encontró el artefacto de publicación."
             exit 1
           fi
+          echo "📦 Artefacto detectado correctamente."
 
       - name: 🔐 Login Azure (OIDC)
         uses: azure/login@v2
@@ -58,3 +77,44 @@ jobs:
           package: ./publish
           runtime-stack: 'DOTNETCORE|8.0'
           startup-command: 'dotnet Scharff.API.Utils.dll'
+
+      - name: 🔍 Verificar estado del despliegue
+        id: status
+        run: |
+          echo "🔎 Consultando estado del App Service..."
+          STATE=$(az webapp show --name $APP_NAME --resource-group $RESOURCE_GROUP --query "state" -o tsv)
+          echo "state=$STATE" >> $GITHUB_OUTPUT
+          echo "✅ Estado actual: $STATE"
+
+      # =====================================================
+      # 📨 Notificación a Microsoft Teams (productiva con curl)
+      # =====================================================
+      - name: 📣 Notificar resultado en Microsoft Teams
+        if: always()
+        env:
+          TEAMS_WEBHOOK: ${{ secrets.MS_TEAMS_WEBHOOK }}
+        run: |
+          if [ -z "$TEAMS_WEBHOOK" ]; then
+            echo "⚠️ MS_TEAMS_WEBHOOK no está configurado. Saltando notificación."
+            exit 0
+          fi
+
+          STATUS="${{ job.status }}"
+          COLOR="#36a64f"; EMOJI="🟢"
+          if [ "$STATUS" != "success" ]; then COLOR="#FF0000"; EMOJI="🔴"; fi
+
+          MESSAGE="{
+            \"@type\": \"MessageCard\",
+            \"@context\": \"http://schema.org/extensions\",
+            \"themeColor\": \"$COLOR\",
+            \"summary\": \"Deploy $STATUS\",
+            \"sections\": [{
+              \"activityTitle\": \"$EMOJI **Azure Deploy - $STATUS**\",
+              \"activitySubtitle\": \"**App:** ${{ inputs.app_name }}<br>**Branch:** ${{ github.ref_name }}<br>**Actor:** ${{ github.actor }}\",
+              \"text\": \"Despliegue: **${{ inputs.app_name }}**<br>Estado: **${{ steps.status.outputs.state }}**<br>[Ver ejecución en GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
+            }]
+          }"
+          
+          curl -H "Content-Type: application/json" \
+                -d "$MESSAGE" \
+                "$TEAMS_WEBHOOK"

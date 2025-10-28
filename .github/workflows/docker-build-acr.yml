@@ -9,19 +9,28 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
+      MS_TEAMS_WEBHOOK:
+        required: false
     outputs:
-      tag:
-        description: "Tag generado para la imagen Docker"
-        value: ${{ jobs.build-scan-push.outputs.image_tag }}
+      version:
+        description: "Versión de la imagen construida"
+        value: ${{ jobs.build-scan-push.outputs.version }}
+      image_uri:
+        description: "URI completo de la imagen en ACR"
+        value: ${{ jobs.build-scan-push.outputs.image_uri }}
 
 permissions:
   id-token: write
   contents: read
 
+# 🔄 Evita builds solapados
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   ACR_NAME: nsfacrdev              # 👈 tu ACR real
-  IMAGE_NAME: nsf-backend-util     # 👈 nombre de tu imagen
-  TAG: ${{ github.run_number }}    # 👈 tag dinámico
+  IMAGE_NAME: nsf-backend-util     # 👈 nombre de la imagen
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -31,9 +40,9 @@ jobs:
     name: 🏗️ Build + Scan + Push ACR
     runs-on: ubuntu-latest
 
-    # 👇 exportamos el TAG para que lo use el workflow principal
     outputs:
-      image_tag: ${{ env.TAG }}
+      version: ${{ steps.version.outputs.version }}
+      image_uri: ${{ steps.meta.outputs.image_uri }}
 
     steps:
       - name: 🧰 Checkout del código
@@ -42,40 +51,92 @@ jobs:
       - name: ⚙️ Configurar Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
 
+      # 🔖 Generar versión con formato estándar
+      - name: 🏷️ Generar versión
+        id: version
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "🔖 Versión generada: $VERSION"
+
+      # 🔐 Login en Azure con OIDC
       - name: 🔐 Login a Azure (OIDC)
-        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5  
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
-          enable-oidc: true
 
+      # 🔐 Login a ACR
       - name: 🔐 Login al ACR
-        run: az acr login --name $ACR_NAME
+        run: az acr login --name ${{ env.ACR_NAME }}
 
+      # 🧾 Generar URI completo de imagen
+      - name: 🧾 Definir metadatos de la imagen
+        id: meta
+        run: |
+          IMAGE_URI="${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "📦 Imagen destino: $IMAGE_URI"
+
+      # 🏗️ Build Docker
       - name: 🏗️ Build de la imagen Docker
         run: |
-          echo "🏷️ Tag actual: $TAG"
-          docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$TAG .
+          docker build \
+            --label org.opencontainers.image.source=${{ github.repository }} \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            --label org.opencontainers.image.version=${{ steps.version.outputs.version }} \
+            -t "${{ steps.meta.outputs.image_uri }}" .
 
-      - name: 🧪 Escaneo de vulnerabilidades con Trivy (bloqueante)
+      # 🧪 Escaneo de vulnerabilidades (bloqueante)
+      - name: 🧪 Escaneo con Trivy (bloqueante)
         uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8
         with:
-          image-ref: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+          image-ref: ${{ steps.meta.outputs.image_uri }}
           format: 'table'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
-          exit-code: '1'             # ❌ falla si hay HIGH o CRITICAL
+          exit-code: '1'              # ❌ falla si hay HIGH o CRITICAL
           ignore-unfixed: true
           output: 'trivy-report.txt'
 
-      - name: 📊 Subir reporte Trivy como artefacto
-        if: always()                 # 📁 se sube aunque falle
+      - name: 📊 Subir reporte Trivy
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
           path: trivy-report.txt
 
-      - name: 🚀 Push de la imagen al ACR
+      # 🚀 Push de la imagen
+      - name: 🚀 Push al ACR
         if: success()
-        run: docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$TAG
+        run: docker push "${{ steps.meta.outputs.image_uri }}"
+
+      # 📨 Notificación a Teams (solo si el secreto existe)
+      - name: 📣 Notificar resultado en Microsoft Teams
+        if: always()
+        run: |
+          if [ -z "${{ secrets.MS_TEAMS_WEBHOOK }}" ]; then
+            echo "⚠️ MS_TEAMS_WEBHOOK no está configurado. Saltando notificación."
+            exit 0
+          fi
+
+          STATUS="${{ job.status }}"
+          COLOR="#36a64f"; EMOJI="🟢"
+          if [ "$STATUS" != "success" ]; then COLOR="#FF0000"; EMOJI="🔴"; fi
+
+          MESSAGE="{
+            \"@type\": \"MessageCard\",
+            \"@context\": \"http://schema.org/extensions\",
+            \"themeColor\": \"$COLOR\",
+            \"summary\": \"Docker build $STATUS\",
+            \"sections\": [{
+              \"activityTitle\": \"$EMOJI **Docker Build & Push - $STATUS**\",
+              \"activitySubtitle\": \"**Repo:** ${{ github.repository }}<br>**Branch:** ${{ github.ref_name }}<br>**Actor:** ${{ github.actor }}\",
+              \"text\": \"Imagen: **${{ steps.meta.outputs.image_uri }}**<br>Versión: **${{ steps.version.outputs.version }}**<br>[Ver ejecución](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
+            }]
+          }"
+
+          curl -H "Content-Type: application/json" \
+               -d "$MESSAGE" \
+               ${{ secrets.MS_TEAMS_WEBHOOK }}

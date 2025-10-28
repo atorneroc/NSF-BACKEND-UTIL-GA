@@ -14,15 +14,24 @@ on:
         type: string
     secrets:
       SONAR_TOKEN:
-        required: true    
+        required: true
+      MS_TEAMS_WEBHOOK:
+        required: false
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+# 🔄 Evita análisis simultáneos del mismo repositorio
+concurrency:
+  group: analyze-security-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   security-scan:
+    name: 🛡️ Análisis de Seguridad (CodeQL + SonarCloud)
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
 
     env:
       SOLUTION_PATH: ${{ inputs.solution }}
@@ -31,6 +40,8 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SHOULD_RUN_SONAR: ${{ github.actor != 'dependabot[bot]' }}
 
+    outputs:
+      analysis_status: ${{ steps.status.outputs.status }}
 
     steps:
       - name: 🧰 Checkout del código
@@ -72,16 +83,17 @@ jobs:
           dotnet tool update --global dotnet-sonarscanner || dotnet tool install --global dotnet-sonarscanner
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-      - name: 🚀 Análisis SonarCloud Begin
+      - name: 🚀 Iniciar análisis SonarCloud
         if: env.SHOULD_RUN_SONAR == 'true'
         run: |
+          echo "🚀 Iniciando análisis SonarCloud..."
           dotnet sonarscanner begin \
             /k:"$SONAR_PROJECT_KEY" \
             /o:"$SONAR_ORG" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.login="$SONAR_TOKEN" \
             /d:sonar.analysis.key="${{ github.run_id }}" \
-            /d:sonar.analysis.name="CI-${{ github.run_number }}" \
+            /d:sonar.analysis.name="Security-${{ github.run_number }}" \
             /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**"
 
       - name: 🏗️ Build para Sonar
@@ -99,4 +111,57 @@ jobs:
 
       - name: 🏁 Finalizar análisis SonarCloud
         if: env.SHOULD_RUN_SONAR == 'true'
-        run: dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
+        id: sonar-finish
+        run: |
+          dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
+          echo "✅ Análisis SonarCloud finalizado correctamente."
+
+      - name: 📊 Subir resultados de prueba
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults
+
+      # -----------------------
+      # 📊 Estado final
+      # -----------------------
+      - name: 📈 Registrar estado del análisis
+        id: status
+        run: |
+          STATUS="${{ job.status }}"
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "📊 Estado del análisis: $STATUS"
+
+      # =====================================================
+      # 📨 Notificación a Microsoft Teams (productiva con curl)
+      # =====================================================
+      - name: 📣 Notificar resultado en Microsoft Teams
+        if: always()
+        env:
+          TEAMS_WEBHOOK: ${{ secrets.MS_TEAMS_WEBHOOK }}
+        run: |
+          if [ -z "$TEAMS_WEBHOOK" ]; then
+            echo "⚠️ MS_TEAMS_WEBHOOK no está configurado. Saltando notificación."
+            exit 0
+          fi
+
+          STATUS="${{ job.status }}"
+          COLOR="#36a64f"; EMOJI="🟢"
+          if [ "$STATUS" != "success" ]; then COLOR="#FF0000"; EMOJI="🔴"; fi
+
+          MESSAGE="{
+            \"@type\": \"MessageCard\",
+            \"@context\": \"http://schema.org/extensions\",
+            \"themeColor\": \"$COLOR\",
+            \"summary\": \"Security Analysis $STATUS\",
+            \"sections\": [{
+              \"activityTitle\": \"$EMOJI **Security Analysis - $STATUS**\",
+              \"activitySubtitle\": \"**Branch:** ${{ github.ref_name }}<br>**Actor:** ${{ github.actor }}\",
+              \"text\": \"**CodeQL y SonarCloud ejecutados.**<br>Estado: **$STATUS**<br>[Ver ejecución en GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
+            }]
+          }"
+
+          curl -H "Content-Type: application/json" \
+               -d "$MESSAGE" \
+               "$TEAMS_WEBHOOK"
