@@ -100,16 +100,33 @@ jobs:
           path: ./publish
           retention-days: 5
 
-      - name: 📣 Notificar resultado en Teams
+      # ===========================================
+      # 📨 Notificación a Teams (versión productiva)
+      # ===========================================
+      - name: 📣 Notificar resultado en Microsoft Teams
         if: always()
-        uses: skitionek/notify-microsoft-teams@v1.4.2
-        with:
-          webhook_url: ${{ secrets.MS_TEAMS_WEBHOOK }}
-          message: |
-            ${{ job.status == 'success' && '🟢 **Build exitosa**' || '🔴 **Build fallida**' }}
-            **Workflow:** ${{ github.workflow }}
-            **Versión:** ${{ steps.version.outputs.version }}
-            **Branch:** ${{ github.ref_name }}
-            **Actor:** ${{ github.actor }}
-            **Ejecutado:** ${{ github.run_id }}
-          theme_color: ${{ job.status == 'success' && '00FF00' || 'FF0000' }}
+        run: |
+          STATUS="${{ job.status }}"
+          COLOR="#36a64f"
+          EMOJI="🟢"
+          if [ "$STATUS" != "success" ]; then
+            COLOR="#FF0000"
+            EMOJI="🔴"
+          fi
+
+          MESSAGE="{
+            \"@type\": \"MessageCard\",
+            \"@context\": \"http://schema.org/extensions\",
+            \"themeColor\": \"$COLOR\",
+            \"summary\": \"Pipeline $STATUS\",
+            \"sections\": [{
+              \"activityTitle\": \"$EMOJI **.NET CI - Resultado: $STATUS**\",
+              \"activitySubtitle\": \"**Workflow:** ${{ github.workflow }}<br>**Branch:** ${{ github.ref_name }}<br>**Actor:** ${{ github.actor }}\",
+              \"text\": \"Versión: **${{ steps.version.outputs.version }}**<br>[Ver ejecución en GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
+            }]
+          }"
+
+          echo "📨 Enviando mensaje a Microsoft Teams..."
+          curl -H "Content-Type: application/json" \
+               -d "$MESSAGE" \
+               ${{ secrets.MS_TEAMS_WEBHOOK }}
