@@ -13,7 +13,7 @@ on:
         required: true
         type: string
       image_tag:
-        default: "latest"   # 👈 se reemplaza dinámicamente desde el workflow principal
+        default: "latest"
         type: string
       slot:
         default: "production"
@@ -26,14 +26,9 @@ on:
       AZURE_SUBSCRIPTION_ID:
         required: true
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   deploy-container:
     runs-on: ubuntu-latest
-    name: 🚀 Deploy Container to Azure
 
     env:
       APP_NAME: ${{ inputs.app_name }}
@@ -41,7 +36,6 @@ jobs:
       ACR_NAME: ${{ inputs.acr_name }}
       IMAGE_NAME: ${{ inputs.image_name }}
       IMAGE_TAG: ${{ inputs.image_tag }}
-      RESOURCE_GROUP: scharff-nsf-dev-rg  # 👈 mejor definirlo como variable (fácil de reutilizar)
 
     steps:
       - name: 🔐 Login Azure (OIDC)
@@ -52,38 +46,35 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           enable-oidc: true
 
-      - name: 🔐 Login a ACR
-        run: az acr login --name $ACR_NAME
+      - name: 🧩 Verificar versión Azure CLI
+        run: az version
 
-      - name: 🔁 Actualizar App Service con nueva imagen
+      - name: 🔐 Login a ACR
         run: |
-          echo "🔁 Actualizando imagen en $APP_NAME con tag: $IMAGE_TAG"
+          az acr login --name $ACR_NAME
+
+      - name: 🔁 Actualizar App Service para usar nueva imagen
+        run: |
+          echo "🔁 Actualizando imagen en $APP_NAME..."
           az webapp config container set \
             --name $APP_NAME \
-            --resource-group $RESOURCE_GROUP \
-            --slot $SLOT_NAME \
+            --resource-group scharff-nsf-dev-rg \
             --container-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG" \
             --container-registry-url "https://$ACR_NAME.azurecr.io"
-      
-      - name: 🔍 Verificar configuración del contenedor
+
+      - name: 🔍 Verificar configuración del App Service
         run: |
-          echo "🔍 Configuración actual de contenedor:"
+          echo "🔍 Verificando imagen aplicada..."
           az webapp config show \
             --name $APP_NAME \
-            --resource-group $RESOURCE_GROUP \
-            --slot $SLOT_NAME \
-            --query "linuxFxVersion"
+            --resource-group scharff-nsf-dev-rg \
+            --query "linuxFxVersion"   
 
       - name: 🔄 Reiniciar App Service
         run: |
-          echo "🔄 Reiniciando $APP_NAME..."
-          az webapp restart --name $APP_NAME --resource-group $RESOURCE_GROUP --slot $SLOT_NAME
+          az webapp restart --name $APP_NAME --resource-group scharff-nsf-dev-rg
 
-      - name: ✅ Validar despliegue
+      - name: ✅ Verificar estado del despliegue
         run: |
-          echo "✅ Estado actual:"
-          az webapp show \
-            --name $APP_NAME \
-            --resource-group $RESOURCE_GROUP \
-            --slot $SLOT_NAME \
+          az webapp show --name $APP_NAME --resource-group scharff-nsf-dev-rg \
             --query "state" -o tsv
