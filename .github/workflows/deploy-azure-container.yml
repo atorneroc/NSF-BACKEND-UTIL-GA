@@ -1,0 +1,69 @@
+name: "Azure Deploy Container Template"
+
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        required: true
+        type: string
+      acr_name:
+        required: true
+        type: string
+      image_name:
+        required: true
+        type: string
+      image_tag:
+        default: "latest"
+        type: string
+      slot:
+        default: "production"
+        type: string
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+
+jobs:
+  deploy-container:
+    runs-on: ubuntu-latest
+
+    env:
+      APP_NAME: ${{ inputs.app_name }}
+      SLOT_NAME: ${{ inputs.slot }}
+      ACR_NAME: ${{ inputs.acr_name }}
+      IMAGE_NAME: ${{ inputs.image_name }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+
+    steps:
+      - name: 🔐 Login Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          enable-oidc: true
+
+      - name: 🔐 Login a ACR
+        run: |
+          az acr login --name $ACR_NAME
+
+      - name: 🚀 Actualizar App Service para usar nueva imagen
+        run: |
+          echo "🔁 Actualizando imagen en $APP_NAME..."
+          az webapp config container set \
+            --name $APP_NAME \
+            --resource-group scharff-nsf-dev-rg \
+            --docker-custom-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG" \
+            --docker-registry-server-url "https://$ACR_NAME.azurecr.io"
+
+      - name: 🔄 Reiniciar App Service
+        run: |
+          az webapp restart --name $APP_NAME --resource-group scharff-nsf-dev-rg
+
+      - name: ✅ Verificar estado del despliegue
+        run: |
+          az webapp show --name $APP_NAME --resource-group scharff-nsf-dev-rg \
+            --query "state" -o tsv
