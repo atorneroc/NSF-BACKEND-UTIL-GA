@@ -40,10 +40,8 @@ jobs:
       security-events: write
 
   # -------------------------------
-  # 🚀 Despliegue Azure (solo en push)
+  # 🐳 Build + Scan + Push a ACR
   # -------------------------------
-
-    # 🐳 Build + Scan + Push a ACR
   docker:
     if: github.event_name == 'push'
     needs: [ci, analyze]
@@ -53,12 +51,33 @@ jobs:
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+  # -------------------------------
+  # 🚀 Despliegue 1: App Service por Código
+  # -------------------------------
   deploy:
-    needs: docker
     if: ${{ success() && github.event_name == 'push' }}
+    needs: docker
     uses: ./.github/workflows/deploy-azure.yml
     with:
       app_name: "nsf-backend-ga"
+      slot: "production"
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+  # -------------------------------
+  # 🚀 Despliegue 2: App Service por Contenedor
+  # -------------------------------
+  deploy-container:
+    if: ${{ success() && github.event_name == 'push' }}
+    needs: docker
+    uses: ./.github/workflows/deploy-azure-container.yml
+    with:
+      app_name: "nsf-backend-ga-cont"          # 👈 tu App Service basado en ACR
+      acr_name: "nsfacrdev"
+      image_name: "nsf-backend-util"
+      image_tag: "latest"
       slot: "production"
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
