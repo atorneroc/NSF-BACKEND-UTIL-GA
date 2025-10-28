@@ -102,7 +102,7 @@ jobs:
 
       - name: 📣 Notificar resultado en Teams
         if: always()
-        uses: skitionek/notify-microsoft-teams@v2
+        uses: skitionek/notify-microsoft-teams@v1.4.2
         with:
           webhook_url: ${{ secrets.MS_TEAMS_WEBHOOK }}
           message: |
