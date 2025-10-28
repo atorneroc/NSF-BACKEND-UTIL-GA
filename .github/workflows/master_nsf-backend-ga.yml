@@ -27,7 +27,7 @@ jobs:
       app_name: "nsf-backend-ga-cont"          # 👈 tu App Service basado en ACR
       acr_name: "nsfacrdev"
       image_name: "nsf-backend-util"
-      image_tag: "latest"
+      image_tag: "92"
       slot: "production"
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}

@@ -64,7 +64,7 @@ jobs:
           az webapp config container set \
             --name $APP_NAME \
             --resource-group scharff-nsf-dev-rg \
-            --container-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:latest" \
+            --container-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG" \
             --container-registry-url "https://$ACR_NAME.azurecr.io"
 
       - name: 🔍 Verificar configuración del App Service
