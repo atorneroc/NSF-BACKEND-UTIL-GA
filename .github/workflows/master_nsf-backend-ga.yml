@@ -13,19 +13,72 @@ permissions:
   security-events: write
 
 jobs:
+  # -------------------------------
+  # 🧪 CI: Build + Test
+  # -------------------------------
+  ci:
+    uses: ./.github/workflows/dotnet-ci.yml
+    with:
+      solution: "nsf-backend-util.sln"
+      test_project: "./Scharff.UnitTest/Scharff.UnitTest.csproj"
 
+  # -------------------------------
+  # 🔍 Análisis de seguridad
+  # -------------------------------
+  analyze:
+    needs: ci
+    uses: ./.github/workflows/analyze-security.yml
+    with:
+      solution: "nsf-backend-util.sln"
+      sonar_project_key: "atorneroc_NSF-BACKEND-UTIL-GA"
+      sonar_org: "atorneroc"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+  # -------------------------------
+  # 🐳 Build + Scan + Push a ACR
+  # -------------------------------
+  docker:
+    if: github.event_name == 'push'
+    needs: [ci, analyze]
+    uses: ./.github/workflows/docker-build-acr.yml
+    id: docker-job   # 👈 importante para referenciar outputs
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+  # -------------------------------
+  # 🚀 Despliegue 1: App Service por Código
+  # -------------------------------
+  deploy:
+    if: ${{ success() && github.event_name == 'push' }}
+    needs: docker
+    uses: ./.github/workflows/deploy-azure.yml
+    with:
+      app_name: "nsf-backend-ga"
+      slot: "production"
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
   # -------------------------------
   # 🚀 Despliegue 2: App Service por Contenedor
   # -------------------------------
   deploy-container:
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ success() && github.event_name == 'push' }}
+    needs: docker
     uses: ./.github/workflows/deploy-azure-container.yml
     with:
       app_name: "nsf-backend-ga-cont"          # 👈 tu App Service basado en ACR
       acr_name: "nsfacrdev"
       image_name: "nsf-backend-util"
-      image_tag: "99"
+      image_tag: ${{ needs.docker.outputs.tag }}
       slot: "production"
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}

@@ -9,23 +9,31 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
+    outputs:
+      tag:
+        description: "Tag generado para la imagen Docker"
+        value: ${{ jobs.build-scan-push.outputs.image_tag }}
 
 permissions:
   id-token: write
   contents: read
 
 env:
-  ACR_NAME: nsfacrdev             # 👈 reemplaza con tu ACR real
-  IMAGE_NAME: nsf-backend-util
-  TAG: ${{ github.run_number }}
+  ACR_NAME: nsfacrdev              # 👈 tu ACR real
+  IMAGE_NAME: nsf-backend-util     # 👈 nombre de tu imagen
+  TAG: ${{ github.run_number }}    # 👈 tag dinámico
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
   build-scan-push:
-    runs-on: ubuntu-latest
     name: 🏗️ Build + Scan + Push ACR
+    runs-on: ubuntu-latest
+
+    # 👇 exportamos el TAG para que lo use el workflow principal
+    outputs:
+      image_tag: ${{ env.TAG }}
 
     steps:
       - name: 🧰 Checkout del código
@@ -43,14 +51,13 @@ jobs:
           enable-oidc: true
 
       - name: 🔐 Login al ACR
-        run: |
-          az acr login --name $ACR_NAME
+        run: az acr login --name $ACR_NAME
 
       - name: 🏗️ Build de la imagen Docker
         run: |
+          echo "🏷️ Tag actual: $TAG"
           docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$TAG .
 
-      # 🚨 Si hay vulnerabilidades HIGH o CRITICAL, falla el pipeline
       - name: 🧪 Escaneo de vulnerabilidades con Trivy (bloqueante)
         uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8
         with:
@@ -58,18 +65,17 @@ jobs:
           format: 'table'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
-          exit-code: '1'            # ⚠️ Falla el job si encuentra HIGH/CRITICAL
+          exit-code: '1'             # ❌ falla si hay HIGH o CRITICAL
           ignore-unfixed: true
           output: 'trivy-report.txt'
 
       - name: 📊 Subir reporte Trivy como artefacto
-        if: always()                # 📁 se sube aunque falle
+        if: always()                 # 📁 se sube aunque falle
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
           path: trivy-report.txt
 
       - name: 🚀 Push de la imagen al ACR
-        if: success()               # 🚫 Solo si no hubo vulnerabilidades graves
-        run: |
-          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$TAG
+        if: success()
+        run: docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$TAG
