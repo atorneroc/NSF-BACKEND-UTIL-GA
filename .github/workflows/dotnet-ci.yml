@@ -2,6 +2,9 @@ name: ".NET CI Template"
 
 on:
   workflow_call:
+    secrets:
+      MS_TEAMS_WEBHOOK:
+        required: true
     inputs:
       solution:
         required: true

@@ -21,6 +21,8 @@ jobs:
     with:
       solution: "nsf-backend-util.sln"
       test_project: "./Scharff.UnitTest/Scharff.UnitTest.csproj"
+    secrets:
+      MS_TEAMS_WEBHOOK: ${{ secrets.MS_TEAMS_WEBHOOK }}
 
   # -------------------------------
   # 🔍 Análisis de seguridad
