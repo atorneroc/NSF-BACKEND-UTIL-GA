@@ -57,7 +57,8 @@ jobs:
             --name $APP_NAME \
             --resource-group scharff-nsf-dev-rg \
             --docker-custom-image-name "$ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG" \
-            --docker-registry-server-url "https://$ACR_NAME.azurecr.io"
+            --docker-registry-server-url "https://$ACR_NAME.azurecr.io" \
+            --enable-managed-identity true
 
       - name: 🔄 Reiniciar App Service
         run: |
