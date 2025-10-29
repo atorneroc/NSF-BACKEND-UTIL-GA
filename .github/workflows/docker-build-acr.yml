@@ -39,6 +39,8 @@ jobs:
   build-scan-push:
     name: 🏗️ Build + Scan + Push ACR
     runs-on: ubuntu-latest
+    environment:
+      name: production
 
     outputs:
       version: ${{ steps.version.outputs.version }}
