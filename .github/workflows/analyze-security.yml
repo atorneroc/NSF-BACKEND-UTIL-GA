@@ -116,13 +116,6 @@ jobs:
           dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
           echo "✅ Análisis SonarCloud finalizado correctamente."
 
-      - name: 📊 Subir resultados de prueba
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: ./TestResults
-
       # -----------------------
       # 📊 Estado final
       # -----------------------
