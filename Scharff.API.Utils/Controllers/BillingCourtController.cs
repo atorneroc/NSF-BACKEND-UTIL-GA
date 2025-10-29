@@ -18,7 +18,7 @@ namespace Scharff.API.Utils.Controllers
             _mediator = mediator;
         }
 
-        [HttpGet("enterprise/{id_company}/businessUnitDOCv2")]
+        [HttpGet("enterprise/{id_company}/businessUnitDOCv3")]
         [SwaggerOperation("Listado de Unidad de Negocio por Empresa")]
         [SwaggerResponse(200, "Retorna Listado de Unidad de Negocio", typeof(CustomResponse<List<ResponseGetBusinessUnitByIdCompany>>))]
         [SwaggerResponse(204, "No se encontro Unidad de Negocio")]
