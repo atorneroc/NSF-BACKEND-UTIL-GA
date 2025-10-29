@@ -33,9 +33,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment:
-      name: production
-      # url: https://nsf-backend-ga.azurewebsites.net  # opcional
+    
     strategy:
       matrix:
         dotnet: [ '8.0.x' ]  # puedes agregar '9.0-preview' más adelante
